@@ -12,6 +12,7 @@ if ! grep -qE "$commit_regex" "$1"; then
     exit 1
 fi
 """
+tf_plan = 'tf.plan'
 
 def task_install_hook():
     """Install git hooks"""
@@ -25,4 +26,26 @@ def task_install_hook():
         'actions': [install_hook],
         'file_dep': [__file__],
         'targets': ['.git/hooks/commit-msg']
+    }
+
+def task_plan():
+    return {
+        'doc': "Create terraform deployment plan",
+        'actions': [['terraform', 'plan', '-input=false', '-var-file=secret.tfvars', '-out=' + tf_plan]],
+        'file_dep': ['secret.tfvars', 'checkin.tf'],
+        'targets': [tf_plan],
+        'verbosity': 2
+    }
+
+def task_deploy():
+    return {
+        'doc': 'Apply terraform deployment plan',
+        'actions': [['terraform', 'apply', '-input=false', tf_plan]],
+        'file_dep': [tf_plan],
+        'verbosity': 2
+    }
+
+def task_acceptance():
+    return {
+        'actions': ['BASE_URL=`terraform output url` behave']
     }
